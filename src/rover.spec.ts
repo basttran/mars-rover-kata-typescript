@@ -26,18 +26,11 @@ class Rover {
 interface Command {
     execute(rover: Rover): Rover
 }
+const directions: Direction[] = ['N', 'W','S', 'E']
 class TurnLeft implements Command {
     execute(rover: Rover): Rover {
-        if( rover.direction === 'N') {
-            return new Rover(rover.x, rover.y, 'W')
-        }
-        if( rover.direction === 'S') {
-            return new Rover(rover.x, rover.y, 'E')
-        }
-        if( rover.direction === 'E') {
-            return new Rover(rover.x, rover.y, 'N')
-        }
-        return new Rover(rover.x, rover.y, 'S')
+        const index = directions.findIndex((direction) => rover.direction === direction) 
+        return new Rover(rover.x, rover.y, directions[(index +1) % 4] )
     }
 }
 

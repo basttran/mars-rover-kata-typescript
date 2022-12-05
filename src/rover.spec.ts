@@ -17,10 +17,14 @@ class Rover {
         this.y = y;
         this.direction = direction;
     }
-
+    static from(roverState: string) {
+        const state = roverState.split(' ')
+        return new Rover(parseInt(state[0], 10), parseInt(state[1], 10), state[2] as any)
+    }
     toString(): string {
         return `${this.x} ${this.y} ${this.direction}`
     }
+
 }
 
 interface Command {
@@ -36,13 +40,18 @@ class TurnLeft implements Command {
 
 class TurnRight implements Command {
     execute(rover: Rover): Rover {
-        throw new Error("Method not implemented.");
+        const index = directions.findIndex((direction) => rover.direction === direction) 
+        return new Rover(rover.x, rover.y, directions[(index + 3 ) % 4] )
     }
 }
 
 class Forward implements Command {
     execute(rover: Rover): Rover {
-        throw new Error("Method not implemented.");
+        const transforms = [[0, 1], [-1, 0], [0, -1], [1, 0]]
+        const index = directions.findIndex((direction) => rover.direction === direction) 
+        const vector = transforms[index]
+
+        return new Rover(rover.x + vector[0], rover.y + vector[1] , rover.direction)
     }
 }
 
@@ -68,13 +77,15 @@ class Controller {
     constructor (mars: Mars) {
         this.mars = mars
     }
-    execute(roverState: Rover, commands: Command[]): Rover {
-        return roverState;
-    }
+    execute = (roverState: Rover, commands: Command[]): Rover => { 
+        const newState = commands.reduce((state, command) => command.execute(state), roverState) 
+        return new Rover (Controller.adjust(newState.x, this.mars.columns), Controller.adjust(newState.y, this.mars.rows), newState.direction)
+    };
+    static adjust = (coordinate: number, axisLength: number): number => (( coordinate % axisLength )+ axisLength) % axisLength
 }
 
 describe('Rover acceptance test', () => {
-    it.skip('Should send the rover to the right position', () => {
+    it('Should send the rover to the right position', () => {
         //Given
         const mars = new Mars(5,5)
         const initialRover = new Rover(1,2,"N")
@@ -84,6 +95,28 @@ describe('Rover acceptance test', () => {
         const newRoverState = controller.execute(initialRover, commands)
         //Then 
         expect(newRoverState.toString()).toBe('1 3 N')
+    })
+    it('Should send the rover to the right position when going "over" south', () => {
+        //Given
+        const mars = new Mars(5,5)
+        const initialRover = new Rover(0,0,"S")
+        const commands = new Translator().translate("FFF")
+        const controller = new Controller(mars)
+        //When
+        const newRoverState = controller.execute(initialRover, commands)
+        //Then 
+        expect(newRoverState.toString()).toBe('0 2 S')
+    })
+    it('Should send the rover to the right position when going "over" west', () => {
+        //Given
+        const mars = new Mars(5,5)
+        const initialRover = new Rover(0,0,"W")
+        const commands = new Translator().translate("FFFFFFFF")
+        const controller = new Controller(mars)
+        //When
+        const newRoverState = controller.execute(initialRover, commands)
+        //Then 
+        expect(newRoverState.toString()).toBe('2 0 W')
     })
 })
 describe('Rover', () => {
@@ -117,7 +150,7 @@ describe('Translator', () => {
     })
 })
 describe('Commands', () => {
-    it.each([['N', 'W'], ['S', 'E'], ['E', 'N'], ['W', 'S']])('Should return a rover with new state', (initialDirection: any, expectedDirection: any) => {
+    it.each([['N', 'W'], ['S', 'E'], ['E', 'N'], ['W', 'S']])('Should return a rover with new state when rover rotates to left', (initialDirection: any, expectedDirection: any) => {
         //Given
         const rover = new Rover(1,2, initialDirection)
         //When
@@ -126,48 +159,25 @@ describe('Commands', () => {
         //Then 
         expect(updatedRover.toString()).toEqual(`1 2 ${expectedDirection}`)
     })
+    it.each([['N', 'E'], ['S', 'W'], ['E', 'S'], ['W', 'N']])('Should return a rover with new state when rover rotates to right', (initialDirection: any, expectedDirection: any) => {
+        //Given
+        const rover = new Rover(1,2, initialDirection)
+        //When
+        const command = new TurnRight()
+        const updatedRover = command.execute(rover)
+        //Then 
+        expect(updatedRover.toString()).toEqual(`1 2 ${expectedDirection}`)
+    })
+    it.each([['1 2 N', '1 3 N'], ['1 2 S', '1 1 S'], ['1 2 E', '2 2 E'], ['1 2 W', '0 2 W']])('Should return a rover with new state when rover go forward', (initialState: any, expectedState: any) => {
+        //Given
+        const rover = Rover.from(initialState)
+        //When
+        const command = new Forward()
+        const updatedRover = command.execute(rover)
+        //Then 
+        expect(updatedRover.toString()).toEqual(expectedState)
+    })
 })
 
 
 
-
-// class Rover {
-//     constructor(private x: number, private y: number, private initialDirection: string) {
-
-//     }
-//     direction: string = this.initialDirection
-
-//     position: any = {
-//         x: this.x,
-//         y: this.y
-//     }
-
-//     commands: string[] = []
-
-//     handleCommands(commands: string[]) {
-//         this.commands = commands
-//     }   
-// }
-
-
-// describe('Rover behaviour', () => {
-//     it('Should instantiate with intial position and direction for Mars Rover', () => {
-//         //Given
-//         const marsRover = new Rover(0,0,'N')
-//         //When
-
-//         //Then
-//         expect(marsRover.position.x).toEqual(0);
-//         expect(marsRover.position.y).toEqual(0);
-//         expect(marsRover.direction).toEqual('N');
-//     })
-//     it('Should take an array of commands', () => {
-//         //Given
-//         const commands: string[] = []
-//         const marsRover = new Rover(0,0,'N')
-//         //When
-//         marsRover.handleCommands(commands)
-//         //Then
-//         expect(marsRover.commands).toEqual(commands);
-//     })
-// })
